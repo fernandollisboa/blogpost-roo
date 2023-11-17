@@ -1,5 +1,3 @@
 class Bull < ApplicationRecord
-  validates :name, presence: true
-  validates :born_on, presence: true
-  validates :offspring_count, presence: true
+  validates :name, :born_on, :offspring_count, :registration_code, presence: true
 end

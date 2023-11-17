@@ -15,6 +15,7 @@ ActiveRecord::Schema[7.1].define(version: 2023_11_17_164449) do
     t.string "name"
     t.date "born_on"
     t.integer "offspring_count"
+    t.string "registration_code"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
