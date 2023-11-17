@@ -44,7 +44,7 @@ end
 Roo setup is dead simple! You can install it as a gem:
 
 ```bash
-$ gem install roo
+  $ gem install roo
 ```
 
 Or add it to your Gemfile
@@ -56,3 +56,43 @@ Or add it to your Gemfile
 If you'd like more information on setup, you can find in the official [README](https://github.com/roo-rb/roo#readme)
 
 ## Importing our data
+
+We can start with simply initilizaing you spreadsheet model sing its relative path and Roo::Excel.new:
+
+```rb
+  spreadsheet = Roo::Excelx.new("./bulls.xlsx")
+```
+
+Then we can iterate over our spreadsheet and get the rows as arrays
+
+```rb
+  spreadsheet.each do |row|
+    puts row.inspect
+  end
+  # ["Registration Code", "Name", "Born On", "Offspring Count"]
+  # ["003", "Freddie The Biggie", Tue, 05 May 2015, 20]
+  # ["002", "Arnold II", Fri, 04 Apr 2014, 10]
+  # ["001", "March", Sun, 03 Mar 2013, 5]
+  # ["000", "Zero", Thu, 02 Feb 2012, 0]
+```
+
+Or maybe you'd like to import it as a populated hash?
+
+```rb
+  # This will check for the correct headers values
+  bull_attributes_headers = {
+    registration_code: 'Registration Code',
+    name: 'Name',
+    born_on: 'Born On',
+    offspring_count: 'Offspring Count'
+  }
+
+  spreadsheet.each(bull_attributes_headers) do |row|
+    puts row.inspect
+  end
+  # {:registration_code=>"Registration Code", :name=>"Name", :born_on=>"Born On", :offspring_count=>"Offspring Count"}
+  # {:registration_code=>"003", :name=>"Freddie The Biggie", :born_on=>Tue, 05 May 2015, :offspring_count=>20 }
+  # {:registration_code=>"002", :name=>"Arnold II", :born_on=>Fri, 04 Apr 2014, :offspring_count=>10}
+  # {:registration_code=>"001", :name=>"March", :born_on=>Sun, 03 Mar 2013, :offspring_count=>5}
+  # {:registration_code=>"000", :name=>"Zero", :born_on=>Thu, 02 Feb 2012, :offspring_count=>0}
+```
