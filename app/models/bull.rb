@@ -1,0 +1,2 @@
+class Bull < ApplicationRecord
+end
