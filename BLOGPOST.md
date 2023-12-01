@@ -118,6 +118,67 @@ spreadsheet.cell(desired_row, desired_column)
 Or maybe you'd like to import it as a hash?
 
 ```rb
+bull_attributes_headers = {
+  registration_code: 'Registration Code',
+  name: 'Name',
+  born_on: 'Born On',
+  offspring_count: 'Offspring Count'
+}
+
+# This will check for the correct headers values
+spreadsheet.each(bull_attributes_headers) do |row|
+  puts row.inspect
+end
+
+# {:registration_code=>"Registration Code", :name=>"Name", :born_on=>"Born On", :offspring_count=>"Offspring Count"}
+# {:registration_code=>"003", :name=>"Freddie The Biggie", :born_on=>Tue, 05 May 2015, :offspring_count=>20 }
+# {:registration_code=>"002", :name=>"Arnold II", :born_on=>Fri, 04 Apr 2014, :offspring_count=>10}
+# {:registration_code=>"001", :name=>"March", :born_on=>Sun, 03 Mar 2013, :offspring_count=>5}
+# {:registration_code=>"000", :name=>"Zero", :born_on=>Thu, 02 Feb 2012, :offspring_count=>0}  
+```
+Alternatively we can use the .parse method to return an array of hashes, each hash in the array representing an row. Just like with the above solution we can pass the header values, but this way we can use *Strings* or *Regexp*
+```rb
+spreadsheet.parse(
+  registration_code: 'Registration Code',
+  name: 'Name',
+  born_on: 'Born On',
+  offspring_count: 'Offspring Count'
+)
+
+# => [
+#     {:registration_code=>"003", :name=>"Freddie The Biggie", :born_on=>Fri, 15 May 2015, :offspring_count=>20},
+#     {:registration_code=>"002", :name=>"Arnold II", :born_on=>Mon, 14 Apr 2014, :offspring_count=>10},
+#     {:registration_code=>"001", :name=>"March", :born_on=>Wed, 13 Mar 2013, :offspring_count=>5},
+#     {:registration_code=>"000", :name=>"Zero", :born_on=>Sun, 12 Feb 2012, :offspring_count=>0}
+#   ]
+```
+
+While using an Excel spreadsheet we can also stream each row using .each_row_streaming, which will yield an array of [Excelx::Cell](https://www.rubydoc.info/gems/roo/Roo/Excelx/Cell/Base) per row, which have access to a number of uselful [helpers](https://www.rubydoc.info/gems/roo/Roo/Excelx/Cell)
+```rb
+# This method excludes blank cells from the array, you can include them (imported as nil) by using the option pad_cells: true
+# You can offset the initial row (like the header/first one by using the option offset: X)
+# You can define the number of yields/passed rows with max_rows: X (always increments 1, e.g: X = 3 -> max_rows: 4)
+spreadsheet.each_row_streaming(offset: 1, max_rows: 2) do |row|
+  puts row.inpect
+end
+
+# => [
+#     #<Roo::Excelx::Cell::String:0xb58 @cell_value="003", @coordinate=[2, 1], @value="003">, 
+
+#     #<Roo::Excelx::Cell::String:0xb08 @cell_value="Freddie The Biggie", @coordinate=[2, 2], @value="Freddie The Biggie">,
+
+#     #<Roo::Excelx::Cell::Date:0xac0 @cell_value="42139", @cell_type=[:numeric_or_formula, "dd/mm/yyyy"], @style=2, @coordinate=[2, 3], @value=Fri, 15 May 2015, @format="dd/mm/yyyy">,
+
+#     #<Roo::Excelx::Cell::Number:0xab8 @cell_value="20", @cell_type=[:numeric_or_formula, "General"], @coordinate=[2, 4], @value=20, @format="General">
+#   ]
+# ...
+
+```
+### Creating our bulls objects
+Now that we know multiple ways to import our data we can finally create our beloved bulls!
+
+We can create them using any method, we'll use the hash one
+```rb
   bull_attributes_headers = {
     registration_code: 'Registration Code',
     name: 'Name',
@@ -125,17 +186,30 @@ Or maybe you'd like to import it as a hash?
     offspring_count: 'Offspring Count'
   }
 
-  # This will check for the correct headers values
   spreadsheet.each(bull_attributes_headers) do |row|
-    puts row.inspect
+    Bull.create(
+      registration_code: row[:registration_code]
+      name: row[:name],
+      born_on: row[:born_on],
+      offspring_count: row[:offspring_count]
+    )
   end
-
-  # {:registration_code=>"Registration Code", :name=>"Name", :born_on=>"Born On", :offspring_count=>"Offspring Count"}
-  # {:registration_code=>"003", :name=>"Freddie The Biggie", :born_on=>Tue, 05 May 2015, :offspring_count=>20 }
-  # {:registration_code=>"002", :name=>"Arnold II", :born_on=>Fri, 04 Apr 2014, :offspring_count=>10}
-  # {:registration_code=>"001", :name=>"March", :born_on=>Sun, 03 Mar 2013, :offspring_count=>5}
-  # {:registration_code=>"000", :name=>"Zero", :born_on=>Thu, 02 Feb 2012, :offspring_count=>0}
 ```
+Now let's check that our Bulls have been correctly created in our rails console
+```rb
+irb(main):001> Bull.all
+=> [
+  #<Bull:0x00007f16232494c0 id: 1, name: "Freddie The Biggie", born_on: Fri, 15 May 2015, offspring_count: 20, registration_code: "003", created_at: --- UTC +00:00, updated_at: --- UTC +00:00>,
+
+ #<Bull:0x00007f1623249380 id: 2, name: "Arnold II", born_on: Mon, 14 Apr 2014, offspring_count: 10, registration_code: "002", created_at: --- UTC +00:00, updated_at: --- UTC +00:00>,
+
+ #<Bull:0x00007f1623249240 id: 3, name: "March", born_on: Wed, 13 Mar 2013, offspring_count: 5, registration_code: "001", created_at: --- UTC +00:00, updated_at: --- UTC +00:00>,
+ 
+ #<Bull:0x00007f1623249100 id: 4, name: "Zero", born_on: Sun, 12 Feb 2012, offspring_count: 0, registration_code: "000", created_at: --- UTC +00:00, updated_at: --- UTC +00:00>
+]
+```
+There it is! Now we can use these information to closely keep up with our handsome bulls!
+
 ## Tests, Tests, Tests
 So.. how do we test it?
 
@@ -160,5 +234,5 @@ spreadsheet.celltype(2, 3)
 ```
 There we have it, the cell object has a *type*, that's how Roo has been doing its magic, this type is defined by the file itself, its the data type/format defined by the user, be it a date, a number or a string.
 
-Ok, cool, but what about the .formatted_value()? Well, think of it as [...]
+Ok, cool, but what about the .formatted_value()? Well, think of it as a direct access to what represent the data in string, depending on your needs you'll need to access this values without the rails magic, be it because you want to treat it in some way or because you can't know for sure what the data type of each cell is, in this case you can use the formatted_value. 
 ## Known Issues
