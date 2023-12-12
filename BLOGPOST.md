@@ -2,11 +2,11 @@
 
 Have you ever asked yourself how hard it is to import data from Excel files (.xlsx) into a Rails project? Well, taking into account that .xlsx is not plain-text (like csv) but actually a lot of binary, it should be really hard, right?
 
-Actually, no! Thankfully, there are some very smart people out there who love to share their sollutions with us, and the maintainers of [Roo](https://github.com/roo-rb/roo) are one of those people. So today we're gonna learn how to setup and start importing our beloved data from rows in a .xlsx file:
+Actually, no! Thankfully, there are some very smart people out there who love to share their sollutions with us, and the maintainers of [Roo](https://github.com/roo-rb/roo) are one of those people. So today we're gonna learn how to setup the gem and explore different ways to import our beloved data from rows in a .xlsx file:
 
 ## Creating our spreadsheet and models
 
-Let's picture this: you're a really big farm owner, who owns a lot of *mighty bulls*. You'd like to have them saved as ruby models to check how they are doing, see their information and the offspring count. You'd like to have rows with the following information:
+Let's picture this: you're a really big farm owner, who owns a lot of *mighty bulls*. You'd like to have them saved somewhere digitally to keep up with them, so you have the brilliant ideia to represent them as ruby models, see their personal information and the offspring count. You'd have rows with the following information:
 
 | Registration Code | Name            | Born On    | Offspring Total |
 | ----------------- | --------------- | ---------- | --------------- |
@@ -53,14 +53,16 @@ Or add it to your Gemfile
 
 If you'd like more information on setup, you can find in the official [README](https://github.com/roo-rb/roo#readme)
 
+This gem allows you to impoprt data from different spreadsheet types, like CSV, LibreOffice, OpenOffice etc; but in this brief tutorial we'll only tackle the Excel format, some of these importation steps apply to these other formats, so do not be descouraged to try it out either way!  
+
 ## Importing our data
 
-We can start with simply initializing you spreadsheet model using its relative path and Roo::Excelx.new:
+We can start by simply initializing you spreadsheet model using its relative path and Roo::Excelx.new, which will instantiate an object representing our spreadsheet:
 
 ```rb
   spreadsheet = Roo::Excelx.new("./bulls.xlsx")
 ```
-We can check some basic info about the spreadsheet using:
+We can check some basic information about the spreadsheet using:
 
 ```rb
   spreadsheet.info
@@ -90,7 +92,6 @@ spreadsheet.first_column
 spreadsheet.last_column
 # => 5
 ```
-
 We can access each row as an array, iterating the spreadsheet with '.each' we have:
 ```rb
   # This access wil also access the headers!
@@ -104,10 +105,12 @@ We can access each row as an array, iterating the spreadsheet with '.each' we ha
   # ["001", "March", Sun, 03 Mar 2013, 5]
   # ["000", "Zero", Thu, 02 Feb 2012, 0]
 ```
+This allow us to use the whole array to build our Bull objects, it is only a matter of knowing which column represents which data, but is important to note that even though you might know what der the column number/letter on the excel file is, the array persists as an ruby object, so it applies ruby logic, as such the index starts at 0, so be careful!
 
-If we know where the information we want is, we can access it directly using .cell(row, column)
+If we know where the information we want is, we can access it directly using .cell(row, column), this method uses the excel numeration for row and columns, as such it starts on 1, it can also be accessed using letters, but only the column value can be used a such, in this case there is also a shorthand as you'll se below, but we do not think its good practice to use it
 
 ```rb
+# Using only numbers
 desired_row = 2
 desired_column = 3
 
@@ -115,7 +118,21 @@ spreadsheet.cell(desired_row, desired_column)
 # => Fri, 15 May 2015
 ```
 
-Or maybe you'd like to import it as a hash?
+```rb
+# Using column as a letter
+desired_column_letter = 'C'
+
+spreadsheet.cell(desired_row, desired_column_letter)
+# => Fri, 15 May 2015
+```
+
+```rb
+# Shorthand (we do not recommend this usage)
+spreadsheet.c2
+# => Fri, 15 May 2015
+```
+
+Or maybe you'd like to import it as a hash? we can pass an options hash to specify the headers, this way we can access the information using a key, pretty cool, right?
 
 ```rb
 bull_attributes_headers = {
@@ -136,7 +153,7 @@ end
 # {:registration_code=>"001", :name=>"March", :born_on=>Sun, 03 Mar 2013, :offspring_count=>5}
 # {:registration_code=>"000", :name=>"Zero", :born_on=>Thu, 02 Feb 2012, :offspring_count=>0}  
 ```
-Alternatively we can use the .parse method to return an array of hashes, each hash in the array representing an row. Just like with the above solution we can pass the header values, but this way we can use *Strings* or *Regexp*
+Alternatively we can use the .parse method to return an *array* of hashes, each hash in the array representing an row. Just like with the above solution we can pass the header values, but this way we can use *Strings* or *Regexp*
 ```rb
 spreadsheet.parse(
   registration_code: 'Registration Code',
@@ -154,10 +171,12 @@ spreadsheet.parse(
 ```
 
 While using an Excel spreadsheet we can also stream each row using .each_row_streaming, which will yield an array of [Excelx::Cell](https://www.rubydoc.info/gems/roo/Roo/Excelx/Cell/Base) per row, which have access to a number of uselful [helpers](https://www.rubydoc.info/gems/roo/Roo/Excelx/Cell)
+
+By default this method excludes blank cells from the array, you can include them (imported as nil) by using the option *'pad_cells: true'*, also, you can offset the initial row (like the header/first one) by using the option *offset: X*
+
+Lastly , you can also define the number of *yields/passed rows* with *max_rows: X* (it always increments 1, e.g: X = 3 -> max_rows: 4)
 ```rb
-# This method excludes blank cells from the array, you can include them (imported as nil) by using the option pad_cells: true
-# You can offset the initial row (like the header/first one by using the option offset: X)
-# You can define the number of yields/passed rows with max_rows: X (always increments 1, e.g: X = 3 -> max_rows: 4)
+
 spreadsheet.each_row_streaming(offset: 1, max_rows: 2) do |row|
   puts row.inpect
 end
@@ -188,7 +207,7 @@ We can create them using any method, we'll use the hash one
 
   spreadsheet.each(bull_attributes_headers) do |row|
     Bull.create(
-      registration_code: row[:registration_code]
+      registration_code: row[:registration_code],
       name: row[:name],
       born_on: row[:born_on],
       offspring_count: row[:offspring_count]
@@ -208,7 +227,7 @@ irb(main):001> Bull.all
  #<Bull:0x00007f1623249100 id: 4, name: "Zero", born_on: Sun, 12 Feb 2012, offspring_count: 0, registration_code: "000", created_at: --- UTC +00:00, updated_at: --- UTC +00:00>
 ]
 ```
-There it is! Now we can use these information to closely keep up with our handsome bulls!
+There it is! Now we can use these information to closely keep up with our handsome bulls! It's as simples and direct as it gets. In the real world we would need to treat the data, look for inconsistencies and so on, but the core ideia here is to realize that excel files can be easily imported, and it really is that simple!
 
 ## Tests, Tests, Tests
 So.. how do we test it?
@@ -219,7 +238,54 @@ Really, we don't want to test the gem per say, this is a job for the maintaners 
 
 A good practice would be to create service objects with the importation and testing it (that's what we've done!) but just like all things on life, it also *depends*, see what's the best fit for your project!
 
-## Difference between '.cell ()' and '.formatted_value()'
+As an example we created some basic testing to see if our importation really is creating the bulls with the provided information, if it is creating all the bulls.
+
+Mainly we'll want to use the helper [*fixture_file_upload*](https://api.rubyonrails.org/classes/ActionDispatch/TestProcess/FixtureFile.html) to use example files to implement specific behaviour, these files we'll be available to be accessed at #spec/fixtures/files and we are using [rspec-rails](https://github.com/rspec/rspec-rails)
+```rb
+# spec/services/bulls/import_spec.rb
+require 'rails_helper'
+
+describe Bulls::Import, type: :service do
+  describe '#call' do
+    subject(:import_bulls) { described_class.new.call(file_path) }
+
+    context 'when all information is valid' do
+      let(:file_path) { './one_bull_with_valid_information.xlsx' }
+
+      let(:expected_attributes) do
+        {
+          registration_code: '000',
+          name: 'Zero',
+          born_on: Date.parse('Sun, 12 Feb 2012'),
+          offspring_count: 0
+        }
+      end
+
+      it 'creates one bull' do
+        expect{ import_bulls }.to change{ Bull.count }.by(1)
+      end
+
+      it 'creates the bull with the provided information' do
+        import_bulls
+
+        expect(Bull.last).to have_attributes(expected_attributes)
+      end
+    end
+
+    context 'when there are multiple bulls in the spreadsheet' do
+      let(:file_path) { './five_bulls_on_excel.xlsx' }
+
+      it 'creates the same number of bulls' do
+        expect{ import_bulls }.to change{ Bull.count }.by(5)
+      end
+    end
+  end
+end
+
+
+```
+
+## Inconsistencies on data types (the *.cell* and *.formatted_value* paradox)
 Now this is some important stuff, both of these methods return us values that are presente in the spreadsheet, right? Kinda.
 
 If you've haven't noticed yet, rails magic has been happening since the start of this blogpost, the format of the imported data is correct and is exactly what we expected, but.. how? Well, this happens because there is a 'format' value assigned to each and every cell we've been using, we can check this format closely using:
@@ -234,5 +300,4 @@ spreadsheet.celltype(2, 3)
 ```
 There we have it, the cell object has a *type*, that's how Roo has been doing its magic, this type is defined by the file itself, its the data type/format defined by the user, be it a date, a number or a string.
 
-Ok, cool, but what about the .formatted_value()? Well, think of it as a direct access to what represent the data in string, depending on your needs you'll need to access this values without the rails magic, be it because you want to treat it in some way or because you can't know for sure what the data type of each cell is, in this case you can use the formatted_value. 
-## Known Issues
+Ok, cool, but what about the .formatted_value()? Well, think of it as a direct access to what represent the data in string, depending on your needs you'll need to access this values without the rails magic, be it because you want to treat it in some way or because you can't know for sure what the data type of each cell is, in this case you can use the formatted_value.

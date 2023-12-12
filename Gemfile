@@ -23,3 +23,7 @@ gem "roo", "~> 2.10.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 gem "bootsnap", require: false
+
+gem "rspec-rails"
+
+gem 'pry-byebug'
